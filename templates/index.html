@@ -15,7 +15,6 @@ body {
     height: 100vh;
 }
 
-/* APP */
 .app {
     width: 100%;
     max-width: 420px;
@@ -28,7 +27,6 @@ body {
     overflow: hidden;
 }
 
-/* HEADER */
 .header {
     padding: 15px;
     text-align: center;
@@ -36,7 +34,6 @@ body {
     font-weight: bold;
 }
 
-/* ORB */
 .orb {
     width: 110px;
     height: 110px;
@@ -52,14 +49,12 @@ body {
     100% {transform: scale(1);}
 }
 
-/* CHAT */
 .chat {
     flex: 1;
     padding: 15px;
     overflow-y: auto;
 }
 
-/* MESSAGE */
 .msg {
     padding: 12px;
     margin: 8px 0;
@@ -69,20 +64,22 @@ body {
     white-space: pre-line;
 }
 
-/* USER */
 .user {
     background: #2575fc;
     color: white;
     margin-left: auto;
 }
 
-/* BOT */
 .bot {
     background: rgba(255,255,255,0.2);
     color: white;
 }
 
-/* INPUT */
+.typing {
+    opacity: 0.7;
+    font-style: italic;
+}
+
 .input-box {
     display: flex;
     padding: 10px;
@@ -106,13 +103,6 @@ button {
     font-weight: bold;
 }
 
-/* TYPING */
-.typing {
-    opacity: 0.7;
-    font-style: italic;
-}
-
-/* SUGGESTIONS */
 .suggestions {
     display: flex;
     gap: 6px;
@@ -133,7 +123,6 @@ button {
 <body>
 
 <div class="app">
-
     <div class="header">🤖 AI Assistant</div>
     <div class="orb"></div>
 
@@ -143,12 +132,9 @@ button {
         <input id="msg" placeholder="Type a city (e.g. Kolkata)" />
         <button onclick="send()">➤</button>
     </div>
-
 </div>
 
 <script>
-
-let firstLoad = true;
 
 function addMsg(text, type) {
     let chat = document.getElementById("chat");
@@ -163,14 +149,13 @@ function addMsg(text, type) {
     return div;
 }
 
-/* 👉 suggestions UI */
 function addSuggestions() {
     let chat = document.getElementById("chat");
 
     let div = document.createElement("div");
     div.className = "suggestions";
 
-    let options = ["Delhi", "Mumbai", "New York", "Compare"];
+    let options = ["Kolkata", "Delhi", "Mumbai", "Compare"];
 
     options.forEach(opt => {
         let chip = document.createElement("span");
@@ -185,7 +170,6 @@ function addSuggestions() {
     chat.appendChild(div);
 }
 
-/* 👉 initial message */
 window.onload = () => {
     addMsg("👋 Hi! Enter a city name to get weather & AQI.", "bot");
     addSuggestions();
@@ -214,10 +198,9 @@ async function send() {
 
         typing.remove();
 
-        let msg = addMsg(data.response || "No response", "bot");
+        addMsg(data.response || "No response", "bot");
 
-        // 👉 follow-up
-        addMsg("💬 Ask another city or try comparison!", "bot");
+        addMsg("💬 Try another city or compare!", "bot");
         addSuggestions();
 
     } catch (err) {
@@ -226,7 +209,7 @@ async function send() {
     }
 }
 
-/* ✅ ENTER FIX */
+/* ENTER FIX */
 document.getElementById("msg").addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
         e.preventDefault();
