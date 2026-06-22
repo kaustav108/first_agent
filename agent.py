@@ -1,8 +1,11 @@
 import requests
 import json
+import re
+import os
+from groq import Groq
 
 # ==============================
-# 🎨 ANSI COLORS
+# 🎨 COLORS
 # ==============================
 class Color:
     CYAN = "\033[96m"
@@ -17,8 +20,18 @@ class Color:
 # 🔗 CONFIG
 # ==============================
 MCP_URL = "https://mcp-weather-s1s0.onrender.com/tool"
-OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
-MODEL = "phi"
+
+# ✅ USE ENV VARIABLE (IMPORTANT)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+
+if not GROQ_API_KEY:
+    print("❌ Set GROQ_API_KEY environment variable first")
+    raise SystemExit(1)
+
+client = Groq(api_key=GROQ_API_KEY)
+
+
+MODEL = "llama-3.1-8b-instant"
 
 
 # ==============================
@@ -35,29 +48,40 @@ def choose_tool(user_input):
         return "getCoordinatesOnly"
     elif "weather" in text:
         return "getWeatherOnly"
-    elif "today" in text or "holiday" in text or "fact" in text:
+    elif "today" in text or "holiday" in text:
         return "getTodaySpecial"
     else:
         return "getFullInsights"
 
 
 # ==============================
-# 🌍 MULTI CITY EXTRACTION
+# 🌍 CITY EXTRACTION (FIXED)
 # ==============================
 def extract_cities(user_input):
-    words = user_input.replace(",", " ").split()
-    return [w.capitalize() for w in words if w.isalpha()]
+    words = re.findall(r"[A-Za-z]+", user_input)
+
+    ignore = {
+        "weather", "today", "tell", "me", "what", "is",
+        "the", "in", "show", "give", "details"
+    }
+
+    cities = [w.capitalize() for w in words if w.lower() not in ignore]
+
+    print(f"{Color.YELLOW}🔍 Detected cities: {cities}{Color.END}")
+    return cities
 
 
 # ==============================
-# 🔧 MCP CALL
+# 🔧 MCP CALL (FIXED)
 # ==============================
 def call_mcp(tool, city):
     try:
+        print(f"{Color.CYAN}📡 Calling MCP: {tool} → {city}{Color.END}")
+
         res = requests.post(
             MCP_URL,
             json={"tool": tool, "input": city},
-            timeout=20
+            timeout=15
         )
 
         if res.status_code != 200:
@@ -65,8 +89,8 @@ def call_mcp(tool, city):
 
         data = res.json()
 
-        if "error" in data:
-            return {"error": data["error"]}
+        if not data:
+            return {"error": "Empty MCP response"}
 
         return data
 
@@ -75,172 +99,150 @@ def call_mcp(tool, city):
 
 
 # ==============================
-# 🧹 CLEAN DATA + FIX COUNTRY
+# 🧹 CLEAN DATA
 # ==============================
 def clean_data(data):
+    if not isinstance(data, dict):
+        return {"error": "Invalid MCP format"}
+
     cleaned = {}
 
-    for key, value in data.items():
-        if value is None:
+    for k, v in data.items():
+        if v is None:
             continue
-        if isinstance(value, dict) and not value:
-            continue
-        cleaned[key] = value
+        cleaned[k] = v
 
-    # 🔥 FIX: ALWAYS ADD COUNTRY
-    if "country" not in cleaned:
-        cleaned["country"] = "India"
+    cleaned.setdefault("country", "India")
 
     return cleaned
 
 
 # ==============================
-# 🤖 STREAMING LLM (FIXED)
+# 🧠 PROMPT
 # ==============================
-def ask_llm_stream(user_query, tool_used, mcp_data):
-
-    prompt = f"""
-YOU ARE A STRICT DATA DISPLAY ENGINE.
-
-RULES:
-- NO storytelling
-- NO reasoning
-- NO guessing
-- ONLY use MCP data
-- ALWAYS include country in output (if missing assume India)
-
-OUTPUT FORMAT:
+def build_prompt(user_query, mcp_data):
+    return f"""
+FORMAT STRICT:
 
 📍 Location: City, Country
-🌡 Weather: ...
-🌫 Air Quality: ...
-🕒 Time: ...
-🎉 Highlights: ...
+🌡 Weather:
+🌫 Air Quality:
+🕒 Time:
+🎉 Highlights:
 
-INPUT DATA:
+DATA:
 {json.dumps(mcp_data, indent=2)}
 
 USER:
 {user_query}
 """
 
-    payload = {
-        "model": MODEL,
-        "prompt": prompt,
-        "stream": True,
-        "options": {
-            "temperature": 0.1
-        }
-    }
 
+# ==============================
+# 🤖 GROQ RESPONSE (FIXED)
+# ==============================
+def generate_llm_response(prompt):
     try:
-        with requests.post(OLLAMA_URL, json=payload, stream=True, timeout=120) as res:
+        print(f"{Color.GREEN}⚡ Generating response...{Color.END}")
 
-            if res.status_code != 200:
-                print(f"{Color.RED}❌ LLM not responding{Color.END}")
-                return ""
+        completion = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": "Format data cleanly."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            stream=True
+        )
 
-            print(f"\n{Color.CYAN}{Color.BOLD}🤖 AI:{Color.END}\n")
+        full = ""
 
-            full_response = ""
+        for chunk in completion:
+            if not chunk.choices:
+                continue
 
-            for line in res.iter_lines(decode_unicode=True):
-                if not line:
-                    continue
+            delta = chunk.choices[0].delta
 
-                try:
-                    chunk = json.loads(line)
-                    token = chunk.get("response", "")
+            if not delta:
+                continue
 
-                    full_response += token
-                    print(token, end="", flush=True)
+            token = delta.content
 
-                except json.JSONDecodeError:
-                    continue
+            if token:
+                print(token, end="", flush=True)
+                full += token
 
-            print("\n")
-            return full_response
+        if not full:
+            print("❌ Empty LLM response")
+
+        print("\n")
+        return full
 
     except Exception as e:
-        print(f"{Color.RED}❌ LLM error: {e}{Color.END}")
+        print(f"{Color.RED}❌ Groq Error: {e}{Color.END}")
         return ""
 
 
 # ==============================
-# 🚀 MAIN LOOP
+# 🚀 CLI
 # ==============================
-if __name__ == "__main__":
-
-    print(f"{Color.GREEN}{Color.BOLD}🤖 Smart MCP AI Agent (Pro Mode){Color.END}\n")
+def start_cli():
+    print(f"{Color.GREEN}{Color.BOLD}🚀 MCP + Groq Agent Ready{Color.END}\n")
 
     while True:
         user_input = input(f"{Color.CYAN}{Color.BOLD}You:{Color.END} ")
 
         if user_input.lower() == "exit":
-            print(f"{Color.RED}👋 Goodbye!{Color.END}")
+            print("👋 Bye!")
             break
 
-        try:
-            cities = extract_cities(user_input)
+        cities = extract_cities(user_input)
 
-            if not cities:
-                print(f"{Color.RED}❌ Please enter a valid city{Color.END}")
+        if not cities:
+            print(f"{Color.RED}❌ No city found{Color.END}")
+            continue
+
+        if len(cities) > 1:
+            print(f"{Color.YELLOW}🔍 Multi-city mode{Color.END}")
+
+            results = []
+            for city in cities:
+                data = call_mcp("getFullInsights", city)
+
+                if "error" in data:
+                    print(f"{Color.RED}{city}: {data['error']}{Color.END}")
+                    continue
+
+                results.append({city: clean_data(data)})
+
+            if not results:
+                print("❌ No valid data")
                 continue
 
-            # ==============================
-            # 🌍 MULTI CITY MODE
-            # ==============================
-            if len(cities) > 1:
-                print(f"{Color.YELLOW}🔍 Comparing cities...{Color.END}")
+            prompt = build_prompt(user_input, results)
 
-                results = []
+        else:
+            city = cities[0]
+            tool = choose_tool(user_input)
 
-                for city in cities:
-                    data = call_mcp("getFullInsights", city)
+            data = call_mcp(tool, city)
 
-                    if "error" not in data:
-                        results.append({city: clean_data(data)})
+            if "error" in data:
+                print(f"{Color.RED}{data['error']}{Color.END}")
+                continue
 
-                if not results:
-                    print(f"{Color.RED}❌ Failed to fetch data{Color.END}")
-                    continue
+            prompt = build_prompt(user_input, clean_data(data))
 
-                ask_llm_stream(user_input, "multiCityCompare", results)
+        print(f"\n{Color.GREEN}🤖 AI:{Color.END}\n")
+        generate_llm_response(prompt)
 
-            # ==============================
-            # 🎯 SINGLE CITY MODE
-            # ==============================
-            else:
-                city = cities[-1]
-                tool = choose_tool(user_input)
 
-                raw_data = call_mcp(tool, city)
+# ==============================
+# ▶️ ENTRY
+# ==============================
+if __name__ == "__main__":
+    start_cli()
 
-                if "error" in raw_data:
-                    print(f"{Color.RED}{raw_data['error']}{Color.END}")
-                    continue
-
-                clean_mcp_data = clean_data(raw_data)
-
-                ask_llm_stream(user_input, tool, clean_mcp_data)
-
-        except Exception as e:
-            print(f"{Color.RED}❌ Error: {e}{Color.END}")
-
-def run_agent(user_input):
-    cities = extract_cities(user_input)
-
-    if not cities:
-        return "❌ No city found"
-
-    city = cities[0]
-    tool = choose_tool(user_input)
-
-    data = call_mcp(tool, city)
-
-    if "error" in data:
-        return data["error"]
-
-    clean_mcp_data = clean_data(data)
-
-    return ask_llm_stream(user_input, tool, clean_mcp_data)            
+# ==============================
+def run_agent():
+    start_cli()    
