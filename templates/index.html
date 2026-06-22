@@ -21,6 +21,7 @@
     --success: #10b981;
     --warning: #f59e0b;
     --error: #ef4444;
+    --info: #3b82f6;
 }
 
 * {
@@ -105,7 +106,7 @@ body {
 
 /* Header */
 .header {
-    padding: 24px 20px 16px;
+    padding: 20px 20px 12px;
     text-align: center;
     border-bottom: 1px solid var(--border);
     position: relative;
@@ -124,7 +125,13 @@ body {
     color: var(--primary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.header-badge:hover {
+    background: rgba(99, 102, 241, 0.25);
 }
 
 .header-badge::before {
@@ -134,6 +141,11 @@ body {
     background: var(--success);
     border-radius: 50%;
     animation: livePulse 2s infinite;
+}
+
+.header-badge.offline::before {
+    background: var(--error);
+    animation: none;
 }
 
 @keyframes livePulse {
@@ -160,12 +172,12 @@ body {
 .orb-container {
     display: flex;
     justify-content: center;
-    padding: 8px 0 4px;
+    padding: 6px 0 2px;
 }
 
 .orb {
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     background: conic-gradient(from 0deg, var(--primary), var(--secondary), var(--accent), var(--primary));
     position: relative;
@@ -189,7 +201,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: 28px;
     z-index: 2;
     animation: orbSpin 8s linear infinite reverse;
 }
@@ -331,6 +343,7 @@ body {
     display: flex;
     align-items: center;
     gap: 4px;
+    user-select: none;
 }
 
 .chip:hover {
@@ -339,6 +352,10 @@ body {
     color: var(--text-primary);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.chip:active {
+    transform: scale(0.95);
 }
 
 /* Input area */
@@ -382,6 +399,11 @@ body {
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
+.input-wrapper input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .send-btn {
     width: 48px;
     height: 48px;
@@ -398,13 +420,18 @@ body {
     box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
 }
 
-.send-btn:hover {
+.send-btn:hover:not(:disabled) {
     transform: scale(1.05) rotate(-5deg);
     box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
 }
 
-.send-btn:active {
+.send-btn:active:not(:disabled) {
     transform: scale(0.95);
+}
+
+.send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .send-btn svg {
@@ -464,6 +491,12 @@ body {
     padding: 12px;
     border-radius: 12px;
     border: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+.data-item:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(99, 102, 241, 0.3);
 }
 
 .data-label {
@@ -484,6 +517,54 @@ body {
 .data-value.moderate { color: var(--warning); }
 .data-value.bad { color: var(--error); }
 
+/* Comparison card */
+.compare-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-top: 8px;
+}
+
+.compare-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.compare-row:last-child {
+    border-bottom: none;
+}
+
+.compare-city {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.compare-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+    margin: 0 12px;
+    overflow: hidden;
+}
+
+.compare-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+}
+
+.compare-value {
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: right;
+}
+
 /* Error state */
 .error-shake {
     animation: shake 0.5s ease-in-out;
@@ -493,6 +574,59 @@ body {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-8px); }
     75% { transform: translateX(8px); }
+}
+
+/* Toast notification */
+.toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--text-primary);
+    z-index: 1000;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.toast.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+.toast-icon {
+    font-size: 16px;
+}
+
+/* Clear chat button */
+.clear-btn {
+    position: absolute;
+    top: 20px;
+    right: 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.clear-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--error);
+    color: var(--error);
 }
 
 /* Responsive */
@@ -511,6 +645,11 @@ body {
     .bg-mesh, .particles {
         display: none;
     }
+    
+    .clear-btn {
+        top: 12px;
+        right: 12px;
+    }
 }
 </style>
 </head>
@@ -521,9 +660,10 @@ body {
 
 <div class="app">
     <div class="header">
-        <div class="header-badge">MCP Connected</div>
+        <div class="header-badge" id="statusBadge" onclick="checkConnection()">MCP Connected</div>
         <h1>GeoBot</h1>
         <div class="header-sub">Location Intelligence Assistant</div>
+        <button class="clear-btn" onclick="clearChat()" title="Clear conversation">🗑️ Clear</button>
     </div>
 
     <div class="orb-container">
@@ -550,8 +690,13 @@ body {
                 </svg>
             </button>
         </div>
-        <div class="input-hint">Connected to your MCP server for real-time data</div>
+        <div class="input-hint" id="inputHint">Connected to your MCP server for real-time data</div>
     </div>
+</div>
+
+<div class="toast" id="toast">
+    <span class="toast-icon" id="toastIcon">ℹ️</span>
+    <span id="toastText">Notification</span>
 </div>
 
 <script>
@@ -569,6 +714,51 @@ function createParticles() {
     }
 }
 createParticles();
+
+// Toast notification system
+function showToast(text, icon = 'ℹ️', duration = 3000) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toastText').textContent = text;
+    document.getElementById('toastIcon').textContent = icon;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+// Connection status check
+let isConnected = true;
+async function checkConnection() {
+    try {
+        const res = await fetch('/chat', { method: 'HEAD' });
+        isConnected = res.ok;
+        updateStatus(true);
+        showToast('MCP server is online', '✅');
+    } catch (err) {
+        isConnected = false;
+        updateStatus(false);
+        showToast('MCP server is offline', '❌');
+    }
+}
+
+function updateStatus(online) {
+    const badge = document.getElementById('statusBadge');
+    if (online) {
+        badge.classList.remove('offline');
+        badge.textContent = 'MCP Connected';
+        document.getElementById('inputHint').textContent = 'Connected to your MCP server for real-time data';
+    } else {
+        badge.classList.add('offline');
+        badge.textContent = 'MCP Offline';
+        document.getElementById('inputHint').textContent = 'Server offline — responses may be limited';
+    }
+}
+
+// Clear chat
+function clearChat() {
+    const chat = document.getElementById('chat');
+    chat.innerHTML = '';
+    showToast('Conversation cleared', '🗑️');
+    window.onload();
+}
 
 function addMsg(text, type, isCard = false) {
     let chat = document.getElementById("chat");
@@ -621,6 +811,13 @@ function hideTyping() {
     document.getElementById('typing').classList.remove('active');
 }
 
+function setInputEnabled(enabled) {
+    const input = document.getElementById('msg');
+    const btn = document.getElementById('sendBtn');
+    input.disabled = !enabled;
+    btn.disabled = !enabled;
+}
+
 window.onload = () => {
     addMsg("👋 Welcome to GeoBot! I can provide weather, air quality, and location insights for any city worldwide.", "bot");
     addSuggestions([
@@ -630,6 +827,7 @@ window.onload = () => {
         { text: "London", icon: "🇬🇧" },
         { text: "Compare", icon: "⚖️" }
     ]);
+    checkConnection();
 };
 
 async function send() {
@@ -639,6 +837,7 @@ async function send() {
     
     if (!text) return;
     
+    setInputEnabled(false);
     addMsg(text, "user");
     showTyping();
     
@@ -649,28 +848,39 @@ async function send() {
             body: JSON.stringify({message: text})
         });
         
+        if (!res.ok) throw new Error('Server error');
+        
         let data = await res.json();
         hideTyping();
         
-        // Check if response contains structured data (weather/aqi info)
         if (data.response && typeof data.response === 'object') {
-            renderLocationCard(data.response);
+            if (data.response.compare) {
+                renderCompareCard(data.response);
+            } else {
+                renderLocationCard(data.response);
+            }
         } else {
             addMsg(data.response || "No data available", "bot");
         }
         
-        addMsg("🌍 Explore another location or compare cities!", "bot");
-        addSuggestions([
-            { text: "Kolkata", icon: "🇮🇳" },
-            { text: "Delhi", icon: "🇮🇳" },
-            { text: "Mumbai", icon: "🇮🇳" },
-            { text: "Compare", icon: "⚖️" }
-        ]);
+        if (!data.response?.compare) {
+            addMsg("🌍 Explore another location or compare cities!", "bot");
+            addSuggestions([
+                { text: "Kolkata", icon: "🇮🇳" },
+                { text: "Delhi", icon: "🇮🇳" },
+                { text: "Mumbai", icon: "🇮🇳" },
+                { text: "Compare", icon: "⚖️" }
+            ]);
+        }
+        
+        updateStatus(true);
         
     } catch (err) {
         hideTyping();
         let errorDiv = addMsg("⚠️ Connection failed. MCP server may be offline.", "bot");
         errorDiv.classList.add('error-shake');
+        updateStatus(false);
+        setInputEnabled(true);
     }
 }
 
@@ -708,6 +918,43 @@ function renderLocationCard(data) {
     `;
     
     addMsg(cardHTML, "bot", true);
+}
+
+function renderCompareCard(data) {
+    const cities = data.cities || [];
+    const metric = data.metric || 'AQI';
+    
+    let compareHTML = `
+        <div class="location-header">
+            <div class="location-icon">⚖️</div>
+            <div>
+                <div class="location-title">City Comparison</div>
+                <div class="location-subtitle">Comparing ${metric} across locations</div>
+            </div>
+        </div>
+    `;
+    
+    const maxVal = Math.max(...cities.map(c => c.value));
+    
+    cities.forEach(city => {
+        const percentage = (city.value / maxVal) * 100;
+        const color = city.value <= 50 ? 'var(--success)' : city.value <= 100 ? 'var(--warning)' : 'var(--error)';
+        
+        compareHTML += `
+            <div class="compare-row">
+                <div class="compare-city">${city.name}</div>
+                <div class="compare-bar">
+                    <div class="compare-fill" style="width: ${percentage}%; background: ${color}"></div>
+                </div>
+                <div class="compare-value" style="color: ${color}">${city.value}</div>
+            </div>
+        `;
+    });
+    
+    compareHTML += `<div class="msg-time" style="margin-top:12px;text-align:right">${new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:true})}</div>`;
+    
+    addMsg(compareHTML, "bot", true);
+    setInputEnabled(true);
 }
 
 document.getElementById("msg").addEventListener("keydown", function(e) {
